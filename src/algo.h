@@ -4,13 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "config.h"
+#include "maps.h"
 
-bool is_goal(uint64_t x, uint64_t y, uint64_t z);
-bool is_obstacle(uint64_t x, uint64_t y, uint64_t z);
+int calc_potential_gs(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations);
+int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potential_grid2, obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations);
 
-int calc_potential_gs(map_t map);
-int calc_potential_j(map_t map);
-
-int find_waypoints(map_t map);
+int find_waypoints(potential_grid_t map, obstacles_grid_t obstacles_map, position_t starting_position, position_t goal_position);
 
 #endif /* ALGO_H_ */

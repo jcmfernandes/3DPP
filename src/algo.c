@@ -1,86 +1,55 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include "bitmap.h"
+#include <string.h>
 #include "config.h"
 #include "log.h"
+#include "maps.h"
 
-bool is_goal(uint64_t x, uint64_t y, uint64_t z)
+static potential_grid_cell_t calc_avg_gs(potential_grid_t potential_grid, uint64_t x, uint64_t y, uint64_t z)
 {
-	return (GOAL[0] == x) && (GOAL[1] == y) && (GOAL[2] == z);
-}
+	potential_grid_cell_t sum = 0.0;
 
-bool is_obstacle(uint64_t x, uint64_t y, uint64_t z)
-{
-	return bitmap_is_set(OBSTACLES, INDEX(x, y, z));
-}
-
-static map_cell_t calc_avg_gs(map_t map, uint64_t x, uint64_t y, uint64_t z)
-{
-	uint8_t counter = 6;
-	map_cell_t value = 0.0;
-
-	if (x > 0 && x < WORLD_SIZE_X - 1) {
-		value += map[INDEX(x - 1, y, z)];
-		value += map[INDEX(x + 1, y, z)];
-	} else {
-		if (x > 0) {
-			value += map[INDEX(x - 1, y, z)];
-			counter--;
-		}
-		if (x < WORLD_SIZE_X - 1) {
-			value += map[INDEX(x + 1, y, z)];
-			counter--;
-		}
+	if (x > 0) {
+		sum += potential_grid[GRID_INDEX(x - 1, y, z)];
+	}
+	if (x < WORLD_SIZE_X - 1) {
+		sum += potential_grid[GRID_INDEX(x + 1, y, z)];
 	}
 
-	if (y > 0 && y < WORLD_SIZE_Y - 1) {
-		value += map[INDEX(x, y - 1, z)];
-		value += map[INDEX(x, y + 1, z)];
-	} else {
-		if (y > 0) {
-			value += map[INDEX(x, y - 1, z)];
-			counter--;
-		}
-		if (y < WORLD_SIZE_Y - 1) {
-			value += map[INDEX(x, y + 1, z)];
-			counter--;
-		}
+	if (y > 0) {
+		sum += potential_grid[GRID_INDEX(x, y - 1, z)];
+	}
+	if (y < WORLD_SIZE_Y - 1) {
+		sum += potential_grid[GRID_INDEX(x, y + 1, z)];
 	}
 
-	if (z > 0 && z < WORLD_SIZE_Z - 1) {
-		value += map[INDEX(x, y, z - 1)];
-		value += map[INDEX(x, y, z + 1)];
-	} else {
-		if (z > 0) {
-			value += map[INDEX(x, y, z - 1)];
-			counter--;
-		}
-		if (z < WORLD_SIZE_Z - 1) {
-			value += map[INDEX(x, y, z + 1)];
-			counter--;
-		}
+	if (z > 0) {
+		sum += potential_grid[GRID_INDEX(x, y, z - 1)];
+	}
+	if (z < WORLD_SIZE_Z - 1) {
+		sum += potential_grid[GRID_INDEX(x, y, z + 1)];
 	}
 
-	value /= counter;
+	potential_grid_cell_t const average = sum / 6;
 
-	return value;
+	return average;
 }
 
-int calc_potential_gs(map_t map)
+int calc_potential_gs(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations)
 {
 	// Gauss-Seidel
-	for (uint32_t i = 0; i < ITERATIONS; i++) {
+	for (uint32_t i = 0; i < iterations; i++) {
 		for (uint64_t a = 0; a < WORLD_SIZE_X; a++) {
 			for (uint64_t b = 0; b < WORLD_SIZE_Y; b++) {
 				for (uint64_t c = 0; c < WORLD_SIZE_Z; c++) {
-					if (is_goal(a, b, c)) {
-						map[INDEX(a, b, c)] = WEIGHT_SINK;
-					} else if (is_obstacle(a, b, c)) {
-						map[INDEX(a, b, c)] = WEIGHT_OBSTACLE;
+					if (position_is_goal(goal_position, a, b, c)) {
+						potential_grid[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
+					} else if (position_is_obstacle(obstacles_grid, a, b, c)) {
+						potential_grid[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
 					} else {
-						map[INDEX(a, b, c)] = calc_avg_gs(map, a, b, c);
+						potential_grid[GRID_INDEX(a, b, c)] = calc_avg_gs(potential_grid, a, b, c);
 					}
 				}
 			}
@@ -90,43 +59,46 @@ int calc_potential_gs(map_t map)
 	return 0;
 }
 
-int calc_potential_j(map_t map)
+int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potential_grid2, obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations)
 {
-	map_t rf /* read from */ = map;
-	map_t wt /* write to */ = malloc(WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z * sizeof(map_cell_t));
+	if (iterations & 1) {
+		return -1;
+	}
+
+	potential_grid_t rf /* read from */ = potential_grid1;
+	potential_grid_t wt /* write to */ = potential_grid2;
 
 	// Jacobi
-	for (uint32_t i = 0; i < ITERATIONS; i++) {
+	for (uint32_t i = 0; i < iterations; i++) {
 		for (uint64_t a = 0; a < WORLD_SIZE_X; a++) {
 			for (uint64_t b = 0; b < WORLD_SIZE_Y; b++) {
 				for (uint64_t c = 0; c < WORLD_SIZE_Z; c++) {
-					if (is_goal(a, b, c)) {
-						wt[INDEX(a, b, c)] = WEIGHT_SINK;
-					} else if (is_obstacle(a, b, c)) {
-						wt[INDEX(a, b, c)] = WEIGHT_OBSTACLE;
+					if (position_is_goal(goal_position, a, b, c)) {
+						wt[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
+					} else if (position_is_obstacle(obstacles_grid, a, b, c)) {
+						wt[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
 					} else {
-						wt[INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
+						wt[GRID_INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
 					}
 				}
 			}
 		}
 
-		map_t tmp = rf; rf = wt; wt = tmp;
+		potential_grid_t const tmp = rf; rf = wt; wt = tmp;
 	}
-
-	free(wt);
 
 	return 0;
 }
 
-int find_waypoints(map_t map)
+int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t starting_position, position_t goal_position)
 {
-	position_t current_position = { STARTING_POINT[0], STARTING_POINT[1], STARTING_POINT[2] };
+	position_t current_position;
+	memcpy(current_position, starting_position, sizeof(position_t));
 
 	logStart("findWaypoints");
 
 	for (int i = 0; i < 1024; i++) {
-		map_cell_t best_value = map[INDEX(current_position[0], current_position[1], current_position[2])]; // So far best weigt == current weight
+		potential_grid_cell_t best_value = potential_grid[GRID_INDEX(current_position[0], current_position[1], current_position[2])]; // So far best weigt == current weight
 		position_t next; // Next position
 
 		for (int8_t a = -1; a <= 1; a++) {
@@ -135,8 +107,8 @@ int find_waypoints(map_t map)
 					if (current_position[1] + b >= 0 && current_position[1] + b < WORLD_SIZE_Y) {
 						for (int8_t c = -1; c <= 1; c++) {
 							if (current_position[2] + c >= 0 && current_position[2] + c < WORLD_SIZE_Z) {
-								if (!is_obstacle(current_position[0] + a, current_position[1] + b, current_position[2] + c)) {
-									map_cell_t new_value = map[INDEX(current_position[0] + a, current_position[1] + b, current_position[2] + c)];
+								if (!position_is_obstacle(obstacles_grid, current_position[0] + a, current_position[1] + b, current_position[2] + c)) {
+									potential_grid_cell_t const new_value = potential_grid[GRID_INDEX(current_position[0] + a, current_position[1] + b, current_position[2] + c)];
 
 									if (new_value > best_value) {
 										best_value = new_value;
@@ -155,9 +127,9 @@ int find_waypoints(map_t map)
 		printf("Next waypoint: [%lu, %lu, %lu] with value %2.12f (%e)\n", next[0],
 				next[1], next[2], best_value, best_value);
 
-		if (is_goal(next[0], next[1], next[2]))
+		if (position_is_goal(goal_position, next[0], next[1], next[2])) {
 			break;
-		else {
+		} else {
 			// Set found waypoint as next position
 			current_position[0] = next[0];
 			current_position[1] = next[1];

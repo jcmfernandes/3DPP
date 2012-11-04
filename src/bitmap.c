@@ -1,9 +1,12 @@
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "bitmap.h"
 
-static const __BITMAP_DATATYPE bitmap_mask_set[] = {
+#if (__WORDSIZE == 32)
+bitmap_cell_t static const bitmap_mask_set[] = {
 		0x80000000, 0x40000000, 0x20000000, 0x10000000,
 		0x8000000, 0x4000000, 0x2000000, 0x1000000,
 		0x800000, 0x400000, 0x200000, 0x100000,
@@ -14,7 +17,7 @@ static const __BITMAP_DATATYPE bitmap_mask_set[] = {
 		0x8, 0x4, 0x2, 0x1
 };
 
-static const __BITMAP_DATATYPE bitmap_mask_unset[] = {
+bitmap_cell_t static const bitmap_mask_unset[] = {
 		0x7FFFFFFF, 0xBFFFFFFF, 0xDFFFFFFF, 0xEFFFFFFF,
 		0xF7FFFFFF, 0xFBFFFFFF, 0xFDFFFFFF, 0xFEFFFFFF,
 		0xFF7FFFFF, 0xFFBFFFFF, 0xFFDFFFFF, 0xFFEFFFFF,
@@ -24,33 +27,99 @@ static const __BITMAP_DATATYPE bitmap_mask_unset[] = {
 		0xFFFFFF7F, 0xFFFFFFBF, 0xFFFFFFDF, 0xFFFFFFEF,
 		0xFFFFFFF7, 0xFFFFFFFB, 0xFFFFFFFD, 0xFFFFFFFE,
 };
+#elif (__WORDSIZE == 64)
+bitmap_cell_t static const bitmap_mask_set[] = {
+		0x8000000000000000, 0x4000000000000000, 0x2000000000000000, 0x1000000000000000,
+		0x800000000000000, 0x400000000000000, 0x200000000000000, 0x100000000000000,
+		0x80000000000000, 0x40000000000000, 0x20000000000000, 0x10000000000000,
+		0x8000000000000, 0x4000000000000, 0x2000000000000, 0x1000000000000,
+		0x800000000000, 0x400000000000, 0x200000000000, 0x100000000000,
+		0x80000000000, 0x40000000000, 0x20000000000, 0x10000000000,
+		0x8000000000, 0x4000000000, 0x2000000000, 0x1000000000,
+		0x800000000, 0x400000000, 0x200000000, 0x100000000,
+		0x80000000, 0x40000000, 0x20000000, 0x10000000,
+		0x8000000, 0x4000000, 0x2000000, 0x1000000,
+		0x800000, 0x400000, 0x200000, 0x100000,
+		0x80000, 0x40000, 0x20000, 0x10000,
+		0x8000, 0x4000, 0x2000, 0x1000,
+		0x800, 0x400, 0x200, 0x100,
+		0x80, 0x40, 0x20, 0x10,
+		0x8, 0x4, 0x2, 0x1
+};
 
-bitmap_t bitmap_create(uint64_t n)
+bitmap_cell_t static const bitmap_mask_unset[] = {
+		0x7FFFFFFFFFFFFFFF, 0xBFFFFFFFFFFFFFFF, 0xDFFFFFFFFFFFFFFF, 0xEFFFFFFFFFFFFFFF,
+		0xF7FFFFFFFFFFFFFF, 0xFBFFFFFFFFFFFFFF, 0xFDFFFFFFFFFFFFFF, 0xFEFFFFFFFFFFFFFF,
+		0xFF7FFFFFFFFFFFFF, 0xFFBFFFFFFFFFFFFF, 0xFFDFFFFFFFFFFFFF, 0xFFEFFFFFFFFFFFFF,
+		0xFFF7FFFFFFFFFFFF, 0xFFFBFFFFFFFFFFFF, 0xFFFDFFFFFFFFFFFF, 0xFFFEFFFFFFFFFFFF,
+		0xFFFF7FFFFFFFFFFF, 0xFFFFBFFFFFFFFFFF, 0xFFFFDFFFFFFFFFFF, 0xFFFFEFFFFFFFFFFF,
+		0xFFFFF7FFFFFFFFFF, 0xFFFFFBFFFFFFFFFF, 0xFFFFFDFFFFFFFFFF, 0xFFFFFEFFFFFFFFFF,
+		0xFFFFFF7FFFFFFFFF, 0xFFFFFFBFFFFFFFFF, 0xFFFFFFDFFFFFFFFF, 0xFFFFFFEFFFFFFFFF,
+		0xFFFFFFF7FFFFFFFF, 0xFFFFFFFBFFFFFFFF, 0xFFFFFFFDFFFFFFFF, 0xFFFFFFFEFFFFFFFF,
+		0xFFFFFFFF7FFFFFFF, 0xFFFFFFFFBFFFFFFF, 0xFFFFFFFFDFFFFFFF, 0xFFFFFFFFEFFFFFFF,
+		0xFFFFFFFFF7FFFFFF, 0xFFFFFFFFFBFFFFFF, 0xFFFFFFFFFDFFFFFF, 0xFFFFFFFFFEFFFFFF,
+		0xFFFFFFFFFF7FFFFF, 0xFFFFFFFFFFBFFFFF, 0xFFFFFFFFFFDFFFFF, 0xFFFFFFFFFFEFFFFF,
+		0xFFFFFFFFFFF7FFFF, 0xFFFFFFFFFFFBFFFF, 0xFFFFFFFFFFFDFFFF, 0xFFFFFFFFFFFEFFFF,
+		0xFFFFFFFFFFFF7FFF, 0xFFFFFFFFFFFFBFFF, 0xFFFFFFFFFFFFDFFF, 0xFFFFFFFFFFFFEFFF,
+		0xFFFFFFFFFFFFF7FF, 0xFFFFFFFFFFFFFBFF, 0xFFFFFFFFFFFFFDFF, 0xFFFFFFFFFFFFFEFF,
+		0xFFFFFFFFFFFFFF7F, 0xFFFFFFFFFFFFFFBF, 0xFFFFFFFFFFFFFFDF, 0xFFFFFFFFFFFFFFEF,
+		0xFFFFFFFFFFFFFFF7, 0xFFFFFFFFFFFFFFFB, 0xFFFFFFFFFFFFFFFD, 0xFFFFFFFFFFFFFFFE,
+};
+#endif
+
+int bitmap_create_dynamic(bitmap_t *bitmap, uint64_t bits)
 {
-	bitmap_t b = malloc(sizeof(bitmap_t));
-    b->array = calloc((n / sizeof(__BITMAP_DATATYPE)) + 1, sizeof(__BITMAP_DATATYPE));
-    b->size = n;
-    return b;
+	bitmap->size = bits / (__WORDSIZE * sizeof(bitmap_cell_t));
+	bitmap->cells = calloc(bitmap->size, sizeof(bitmap_cell_t));
+	if (bitmap->cells == NULL) {
+		perror("bitmap_create_dynamic: calloc failed.\n");
+		return -1;
+	}
+
+    return 0;
 }
 
-void bitmap_set(bitmap_t b, uint64_t i)
+int bitmap_create_static(bitmap_t *bitmap, bitmap_cell_t *cells, size_t n)
 {
-	b->array[i / sizeof(__BITMAP_DATATYPE)] |= bitmap_mask_set[i & (sizeof(__BITMAP_DATATYPE) - 1)];
+	/*
+	 * Notice that this functions does NOT set all units in bitmap to 0.
+	 */
+	if (n < 1) {
+		perror("bitmap_create_static: 'n' needs to be at greater or bigger than 1.\n");
+		return -1;
+	}
+
+	bitmap->cells = cells;
+	bitmap->size = n;
+
+	return 0;
 }
 
-void bitmap_unset(bitmap_t b, uint64_t i)
+void bitmap_set(bitmap_t *bitmap, uint64_t i)
 {
-	b->array[i / sizeof(__BITMAP_DATATYPE)] &= bitmap_mask_unset[i & (sizeof(__BITMAP_DATATYPE) - 1)];
+	bitmap->cells[i / __WORDSIZE] |= bitmap_mask_set[i & (__WORDSIZE - 1)];
 }
 
-bool bitmap_is_set(bitmap_t b, uint64_t i)
+void bitmap_unset(bitmap_t *bitmap, uint64_t i)
 {
-	return b->array[i / sizeof(__BITMAP_DATATYPE)] & bitmap_mask_set[i & (sizeof(__BITMAP_DATATYPE) - 1)] ? true : false;
+	bitmap->cells[i / __WORDSIZE] &= bitmap_mask_unset[i & (__WORDSIZE - 1)];
 }
 
-void bitmap_destroy(bitmap_t b)
+bool bitmap_is_set(bitmap_t *bitmap, uint64_t i)
 {
-	free(b->array);
-    free(b);
+	return bitmap->cells[i / __WORDSIZE] & bitmap_mask_set[i & (__WORDSIZE - 1)] ? true : false;
+}
+
+uint64_t bitmap_size(bitmap_t *bitmap)
+{
+	uint64_t size = bitmap->size;
+	size *= __WORDSIZE * sizeof(bitmap_cell_t);
+
+	return size;
+}
+
+void bitmap_free(bitmap_t *bitmap)
+{
+	free(bitmap->cells);
 }
 
