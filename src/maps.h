@@ -20,6 +20,7 @@ typedef bitmap_t obstacles_grid_t;
 
 #define GRID_INDEX(x, y, z) ((z) * WORLD_SIZE_X * WORLD_SIZE_Y + (y) * WORLD_SIZE_Y + (x))
 
+#define obstacles_grid_required_cells(n) (bitmap_required_cells(n))
 int obstacles_grid_create(obstacles_grid_t *obstacles_grid, obstacles_grid_cell_t *cells, size_t n);
 
 bool position_is_goal(position_t goal_position, uint64_t x, uint64_t y, uint64_t z);

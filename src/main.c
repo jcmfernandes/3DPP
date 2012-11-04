@@ -10,14 +10,12 @@
 
 typedef enum { GS, PGS, J, PJ } ALGO;
 
-
-obstacles_grid_cell_t static obstacles_grid_cells[bitmap_required_cells(WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z)];
+potential_grid_cell_t static potential_grid_cells_1[WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z];
+potential_grid_cell_t static potential_grid_cells_2[WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z];
+obstacles_grid_cell_t static obstacles_grid_cells[obstacles_grid_required_cells(WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z)];
 
 int main(int argc, char * argv[])
 {
-	potential_grid_cell_t static potential_grid_cells_1[WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z];
-	potential_grid_cell_t static potential_grid_cells_2[WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z];
-
 	potential_grid_t potential_grid1, potential_grid2;
 	obstacles_grid_t obstacles_grid;
 	position_t starting_position, goal_position;

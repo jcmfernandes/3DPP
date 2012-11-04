@@ -1,9 +1,6 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
-#include <stdint.h>
-#include "bitmap.h"
-
 /* Algorithms:
  * GS - Gauss-Seidel
  * J - Jacobi
