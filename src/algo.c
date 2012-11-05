@@ -1,11 +1,10 @@
-#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <omp.h>
 #include "config.h"
-#include "log.h"
-#include "maps.h"
+#include "grids.h"
 
 static potential_grid_cell_t calc_avg_gs(potential_grid_t potential_grid, uint64_t x, uint64_t y, uint64_t z)
 {
@@ -100,9 +99,10 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 	potential_grid_t wt /* write to */ = potential_grid2;
 
 	// Parallel Jacobi
-	#pragma omp parallel
+	uint32_t i;
+	#pragma omp parallel shared(i)
 	{
-		for (uint32_t i = 0; i < iterations; i++) {
+		for (i = 0; i < iterations;) {
 			uint64_t a, b, c;
 
 			#pragma omp for private(a, b, c)
@@ -124,6 +124,7 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 			#pragma omp master
 			{
 				potential_grid_t const tmp = rf; rf = wt; wt = tmp;
+				i += THREADS;
 			}
 			#pragma omp barrier
 		}

@@ -1,12 +1,13 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
+#include <omp.h>
 #include "algo.h"
 #include "bitmap.h"
 #include "config.h"
 #include "heightmap.h"
 #include "log.h"
-#include "maps.h"
+#include "grids.h"
 
 typedef enum { GS, PGS, J, PJ } ALGO;
 
@@ -21,6 +22,8 @@ int main(int argc, char * argv[])
 	position_t starting_position, goal_position;
 	uint64_t iterations;
 
+	omp_set_num_threads(THREADS);
+
 	potential_grid1 = (potential_grid_t) potential_grid_cells_1;
 	potential_grid2 = (potential_grid_t) potential_grid_cells_2;
 	obstacles_grid_create(&obstacles_grid, (obstacles_grid_cell_t *) &obstacles_grid_cells, sizeof(obstacles_grid_cells));
@@ -34,7 +37,7 @@ int main(int argc, char * argv[])
 	goal_position[2] = heightmap[GOAL_X][GOAL_Y] + 2;
 
 	//iterations = 4 * WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z;
-	iterations = 512;
+	iterations = ITERATIONS;
 
 	logStart("initialize obstacle map");
 	// Recode heightmap to global_obstacles

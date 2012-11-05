@@ -9,6 +9,7 @@
  */
 #define ALGORITHM PJ
 #define THREADS 4
+#define ITERATIONS 1024
 
 #define HEIGHT_LIMIT 174
 #define WORLD_SIZE_X 64

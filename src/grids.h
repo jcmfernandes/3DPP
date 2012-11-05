@@ -1,5 +1,5 @@
-#ifndef MAPS_H_
-#define MAPS_H_
+#ifndef GRIDS_H_
+#define GRIDS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,4 +26,4 @@ int obstacles_grid_create(obstacles_grid_t *obstacles_grid, obstacles_grid_cell_
 bool position_is_goal(position_t goal_position, uint64_t x, uint64_t y, uint64_t z);
 bool position_is_obstacle(obstacles_grid_t obstacles_grid, uint64_t x, uint64_t y, uint64_t z);
 
-#endif /* MAPS_H_ */
+#endif /* GRIDS_H_ */

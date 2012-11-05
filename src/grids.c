@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "bitmap.h"
 #include "config.h"
-#include "maps.h"
+#include "grids.h"
 
 int obstacles_grid_create(obstacles_grid_t *obstacles_grid, obstacles_grid_cell_t *cells, size_t n)
 {
