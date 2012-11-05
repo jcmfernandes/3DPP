@@ -90,12 +90,52 @@ int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potentia
 	return 0;
 }
 
+int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potential_grid2, obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations)
+{
+	if (iterations & 1) {
+		return -1;
+	}
+
+	potential_grid_t rf /* read from */ = potential_grid1;
+	potential_grid_t wt /* write to */ = potential_grid2;
+
+	// Parallel Jacobi
+	for (uint32_t i = 0; i < iterations; i++) {
+		uint64_t a, b, c;
+		#pragma omp parallel
+		{
+			#pragma omp for private(a, b, c)
+			for (a = 0; a < WORLD_SIZE_X; a++) {
+				for (b = 0; b < WORLD_SIZE_Y; b++) {
+					for (c = 0; c < WORLD_SIZE_Z; c++) {
+						if (position_is_goal(goal_position, a, b, c)) {
+							wt[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
+						} else if (position_is_obstacle(obstacles_grid, a, b, c)) {
+							wt[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
+						} else {
+							wt[GRID_INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
+						}
+					}
+				}
+			}
+
+			#pragma omp barrier
+			#pragma omp master
+			{
+				potential_grid_t const tmp = rf; rf = wt; wt = tmp;
+			}
+			#pragma omp barrier
+		}
+	}
+
+	return 0;
+}
+
+
 int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t starting_position, position_t goal_position)
 {
 	position_t current_position;
 	memcpy(current_position, starting_position, sizeof(position_t));
-
-	logStart("findWaypoints");
 
 	for (int i = 0; i < 1024; i++) {
 		potential_grid_cell_t best_value = potential_grid[GRID_INDEX(current_position[0], current_position[1], current_position[2])]; // So far best weigt == current weight
@@ -137,8 +177,6 @@ int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_g
 		}
 
 	}
-
-	logEnd("findWaypoints");
 
 	return 0;
 }

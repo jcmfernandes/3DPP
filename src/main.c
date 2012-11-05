@@ -67,6 +67,7 @@ int main(int argc, char * argv[])
 	}
 	logEnd("initialize weightmap from obstacle map");
 
+	logStart("process the potential grid");
 	switch (ALGORITHM) {
 	case GS:
 		calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
@@ -74,12 +75,18 @@ int main(int argc, char * argv[])
 	case J:
 		calc_potential_j(potential_grid1, potential_grid2, obstacles_grid, goal_position, iterations);
 		break;
+	case PJ:
+		calc_potential_pj(potential_grid1, potential_grid2, obstacles_grid, goal_position, iterations);
+		break;
 	default:
 		perror("WTF!\n");
 		break;
 	}
+	logEnd("process the potential grid");
 
+	logStart("findWaypoints");
 	find_waypoints(potential_grid1, obstacles_grid, starting_position, goal_position);
+	logEnd("findWaypoints");
 
 	return 0;
 }
