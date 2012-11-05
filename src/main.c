@@ -33,7 +33,8 @@ int main(int argc, char * argv[])
 	goal_position[1] = GOAL_Y;
 	goal_position[2] = heightmap[GOAL_X][GOAL_Y] + 2;
 
-	iterations = 4 * WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z;
+	//iterations = 4 * WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z;
+	iterations = 512;
 
 	logStart("initialize obstacle map");
 	// Recode heightmap to global_obstacles

@@ -100,10 +100,11 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 	potential_grid_t wt /* write to */ = potential_grid2;
 
 	// Parallel Jacobi
-	for (uint32_t i = 0; i < iterations; i++) {
-		uint64_t a, b, c;
-		#pragma omp parallel
-		{
+	#pragma omp parallel
+	{
+		for (uint32_t i = 0; i < iterations; i++) {
+			uint64_t a, b, c;
+
 			#pragma omp for private(a, b, c)
 			for (a = 0; a < WORLD_SIZE_X; a++) {
 				for (b = 0; b < WORLD_SIZE_Y; b++) {
