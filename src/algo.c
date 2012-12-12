@@ -84,7 +84,8 @@ int calc_potential_pgs(potential_grid_t potential_grid, obstacles_grid_t obstacl
 	return 0;
 }
 
-int calc_potential_gs_conv(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t goal_position)
+int calc_potential_gs_conv(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
+		position_t goal_position, double convergence)
 {
 	// Gauss-Seidel
 	for (uint32_t i = 0;; i++) {
@@ -105,8 +106,8 @@ int calc_potential_gs_conv(potential_grid_t potential_grid, obstacles_grid_t obs
 				}
 			}
 		}
-		printf("%i %f\n", i, delta);
-		if (delta <= 0.001) break;
+
+		if (delta <= convergence) break;
 	}
 
 	return 0;
@@ -162,8 +163,6 @@ static void* pj_work(void *arg)
 	pthread_mutex_unlock(&context->lock);
 	potential_grid_t rf /* read from */ = context->potential_grid1;
 	potential_grid_t wt /* write to */ = context->potential_grid2;
-
-	pthread_barrier_wait(&context->barrier);
 
 	uint64_t const x_left_limit = WORLD_SIZE_X / context->n_threads * tid;
 	uint64_t const x_right_limit = WORLD_SIZE_X / context->n_threads * (tid + 1);

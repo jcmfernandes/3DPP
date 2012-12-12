@@ -73,7 +73,7 @@ int main(int argc, char * argv[])
 	switch (ALGORITHM) {
 	case GS:
 		//calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
-		calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position);
+		calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position, 0.001);
 		break;
 	case J:
 		calc_potential_j(potential_grid1, potential_grid2,

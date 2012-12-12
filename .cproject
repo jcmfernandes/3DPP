@@ -120,10 +120,10 @@
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1146784235;cdt.managedbuild.config.gnu.exe.release.1146784235.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.1904477666;cdt.managedbuild.tool.gnu.c.compiler.input.414281288">
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.1000014148;cdt.managedbuild.config.gnu.exe.debug.1000014148.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1197855845;cdt.managedbuild.tool.gnu.c.compiler.input.96787051">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.1000014148;cdt.managedbuild.config.gnu.exe.debug.1000014148.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1197855845;cdt.managedbuild.tool.gnu.c.compiler.input.96787051">
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.1146784235;cdt.managedbuild.config.gnu.exe.release.1146784235.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.1904477666;cdt.managedbuild.tool.gnu.c.compiler.input.414281288">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>

@@ -7,8 +7,8 @@
  * PGS - Parallel Gauss-Seidel
  * PJ - Parallel Jacobi
  */
-#define ALGORITHM PJ
-#define THREADS 2
+#define ALGORITHM GS
+#define THREADS 4
 #define ITERATIONS 256
 
 #define HEIGHT_LIMIT 174
