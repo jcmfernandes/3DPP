@@ -20,7 +20,7 @@ int main(int argc, char * argv[])
 	potential_grid_t potential_grid1, potential_grid2;
 	obstacles_grid_t obstacles_grid;
 	position_t starting_position, goal_position;
-	uint64_t iterations;
+	uint32_t iterations;
 
 	omp_set_num_threads(THREADS);
 
@@ -74,7 +74,8 @@ int main(int argc, char * argv[])
 	logStart("process the potential grid");
 	switch (ALGORITHM) {
 	case GS:
-		calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
+		//calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
+		calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position);
 		break;
 	case J:
 		calc_potential_j(potential_grid1, potential_grid2, obstacles_grid, goal_position, iterations);
