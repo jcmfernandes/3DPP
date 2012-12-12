@@ -187,9 +187,7 @@ static void* pj_work(void *arg)
 			}
 		}
 
-		potential_grid_t const tmp = rf;
-		rf = wt;
-		wt = tmp;
+		potential_grid_t const tmp = rf; rf = wt; wt = tmp;
 		if (tid == 0) {
 			context->iteration++;
 			/*
@@ -212,6 +210,8 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 	if (iterations & 1) {
 		return -1;
 	}
+
+	int return_code = 0;
 
 	pj_context_t context;
 	context.potential_grid1 = potential_grid1;
@@ -239,11 +239,12 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 	}
 	pj_work((void*) &context);
 	for (uint32_t i = 1; i < n_threads; i++) {
-		void **trash = NULL;
-		pthread_join(threads[i], trash);
+		void *thread_return_code;
+		pthread_join(threads[i], &thread_return_code);
+		if (thread_return_code != 0) return_code = -1;
 	}
 
-	return 0;
+	return return_code;
 }
 
 
