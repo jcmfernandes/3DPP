@@ -8,8 +8,8 @@
  * PJ - Parallel Jacobi
  */
 #define ALGORITHM PJ
-#define THREADS 4
-#define ITERATIONS 512
+#define THREADS 2
+#define ITERATIONS 256
 
 #define HEIGHT_LIMIT 174
 #define WORLD_SIZE_X 64

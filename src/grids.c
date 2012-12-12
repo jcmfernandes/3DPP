@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "bitmap.h"
 #include "config.h"
 #include "grids.h"
@@ -21,4 +22,11 @@ bool position_is_goal(position_t goal_position, uint64_t x, uint64_t y, uint64_t
 bool position_is_obstacle(obstacles_grid_t obstacles_grid, uint64_t x, uint64_t y, uint64_t z)
 {
 	return bitmap_is_set(&obstacles_grid, GRID_INDEX(x, y, z));
+}
+
+int position_copy(position_t dest, position_t src)
+{
+	memcpy(dest, src, sizeof(position_t));
+
+	return 0;
 }

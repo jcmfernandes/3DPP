@@ -1,7 +1,6 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
 #include "algo.h"
 #include "bitmap.h"
 #include "config.h"
@@ -20,9 +19,7 @@ int main(int argc, char * argv[])
 	potential_grid_t potential_grid1, potential_grid2;
 	obstacles_grid_t obstacles_grid;
 	position_t starting_position, goal_position;
-	uint32_t iterations;
-
-	omp_set_num_threads(THREADS);
+	uint32_t iterations, n_threads;
 
 	potential_grid1 = (potential_grid_t) potential_grid_cells_1;
 	potential_grid2 = (potential_grid_t) potential_grid_cells_2;
@@ -38,6 +35,7 @@ int main(int argc, char * argv[])
 
 	//iterations = 4 * WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z;
 	iterations = ITERATIONS;
+	n_threads = THREADS;
 
 	logStart("initialize obstacle map");
 	// Recode heightmap to global_obstacles
@@ -78,10 +76,12 @@ int main(int argc, char * argv[])
 		calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position);
 		break;
 	case J:
-		calc_potential_j(potential_grid1, potential_grid2, obstacles_grid, goal_position, iterations);
+		calc_potential_j(potential_grid1, potential_grid2,
+				obstacles_grid, goal_position, iterations);
 		break;
 	case PJ:
-		calc_potential_pj(potential_grid1, potential_grid2, obstacles_grid, goal_position, iterations);
+		calc_potential_pj(potential_grid1, potential_grid2,
+				obstacles_grid, goal_position, iterations, n_threads);
 		break;
 	default:
 		perror("WTF!\n");
