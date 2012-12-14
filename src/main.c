@@ -72,8 +72,8 @@ int main(int argc, char * argv[])
 	logStart("process the potential grid");
 	switch (ALGORITHM) {
 	case GS:
-		//calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
-		calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position, 0.001);
+		calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
+		//calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position, 0.001);
 		break;
 	case J:
 		calc_potential_j(potential_grid1, potential_grid2,
@@ -90,7 +90,7 @@ int main(int argc, char * argv[])
 	logEnd("process the potential grid");
 
 	logStart("findWaypoints");
-	find_waypoints(potential_grid1, obstacles_grid, starting_position, goal_position);
+	find_waypoints(potential_grid1, obstacles_grid, starting_position, goal_position, stdout);
 	logEnd("findWaypoints");
 
 	return 0;

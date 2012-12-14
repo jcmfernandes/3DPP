@@ -58,37 +58,11 @@ int calc_potential_gs(potential_grid_t potential_grid, obstacles_grid_t obstacle
 	return 0;
 }
 
-int calc_potential_pgs(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations, uint32_t comportaments)
-{
-	// Gauss-Seidel
-	uint32_t i = 0;
-	{
-		for (; i < iterations;) {
-			for (uint64_t a = 0; a < WORLD_SIZE_X; a++) {
-				for (uint64_t b = 0; b < WORLD_SIZE_Y; b++) {
-					for (uint64_t c = 0; c < WORLD_SIZE_Z; c++) {
-						if (position_is_goal(goal_position, a, b, c)) {
-							potential_grid[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
-						} else if (position_is_obstacle(obstacles_grid, a, b, c)) {
-							potential_grid[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
-						} else {
-							potential_grid[GRID_INDEX(a, b, c)] = calc_avg_gs(potential_grid, a, b, c);
-						}
-					}
-				}
-			}
-		}
-	}
-
-
-	return 0;
-}
-
 int calc_potential_gs_conv(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
 		position_t goal_position, double convergence)
 {
 	// Gauss-Seidel
-	for (uint32_t i = 0;; i++) {
+	for (;;) {
 		potential_grid_cell_t delta = 0.0;
 
 		for (uint64_t a = 0; a < WORLD_SIZE_X; a++) {
@@ -113,42 +87,152 @@ int calc_potential_gs_conv(potential_grid_t potential_grid, obstacles_grid_t obs
 	return 0;
 }
 
-int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potential_grid2,
-		obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations)
-{
-	if (iterations & 1) {
-		return -1;
-	}
-
-	potential_grid_t rf /* read from */ = potential_grid1;
-	potential_grid_t wt /* write to */ = potential_grid2;
-
-	// Jacobi
-	for (uint32_t i = 0; i < iterations; i++) {
-		for (uint64_t a = 0; a < WORLD_SIZE_X; a++) {
-			for (uint64_t b = 0; b < WORLD_SIZE_Y; b++) {
-				for (uint64_t c = 0; c < WORLD_SIZE_Z; c++) {
-					if (position_is_goal(goal_position, a, b, c)) {
-						wt[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
-					} else if (position_is_obstacle(obstacles_grid, a, b, c)) {
-						wt[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
-					} else {
-						wt[GRID_INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
-					}
-				}
-			}
-		}
-
-		potential_grid_t const tmp = rf; rf = wt; wt = tmp;
-	}
-
-	return 0;
-}
+//typedef struct {
+//	pthread_cond_t *signal;
+//	pthread_mutex_t lock;
+//	uint32_t n_threads, tid_counter;
+//	uint32_t total_number_iterations;
+//	uint32_t x_compartments, y_compartments, z_compartments;
+//	obstacles_grid_t obstacles_grid;
+//	position_t goal_position;
+//	potential_grid_t potential_grid;
+//} pgs_context_t;
+//
+//static void* pgs_work(void *arg)
+//{
+//	pgs_context_t *const context = (pgs_context_t*) arg;
+//
+//	pthread_mutex_lock(&context->lock);
+//	uint32_t const tid = context->tid_counter++;
+//	pthread_mutex_unlock(&context->lock);
+//
+//	uint64_t const x_left_limit = WORLD_SIZE_X / context->x_compartments * tid;
+//	uint64_t const x_right_limit = WORLD_SIZE_X / context->x_compartments * (tid + 1);
+//	// [x_left_limit, x_right_limit[
+//	uint64_t const y_left_limit = WORLD_SIZE_Y / context->y_compartments * tid;
+//	uint64_t const y_right_limit = WORLD_SIZE_Y / context->y_compartments * (tid + 1);
+//	// [y_left_limit, y_right_limit[
+//	uint64_t const z_left_limit = WORLD_SIZE_Z / context->z_compartments * tid;
+//	uint64_t const z_right_limit = WORLD_SIZE_Z / context->z_compartments * (tid + 1);
+//	// [z_left_limit, z_right_limit[
+//
+//	// Parallel Gauss-Seidel
+//	for (uint32_t iteration = 0; iteration < context->total_number_iterations; iteration++) {
+//		uint64_t a, b, c;
+//
+//		for (a = x_left_limit; a < x_right_limit; a++) {
+//			for (b = y_left_limit; b < y_right_limit; b++) {
+//				for (c = z_left_limit; c < z_right_limit; c++) {
+//					if (position_is_goal(context->goal_position, a, b, c)) {
+//						wt[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
+//					} else if (position_is_obstacle(context->obstacles_grid, a, b, c)) {
+//						wt[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
+//					} else {
+//						wt[GRID_INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
+//					}
+//				}
+//			}
+//		}
+//
+//		potential_grid_t const tmp = rf; rf = wt; wt = tmp;
+//		if (tid == 0) {
+//			context->iteration++;
+//			/*
+//			 * Note: I'm pretty sure this in not 100% portable; in some
+//			 * archs (e.g., alpha) there will be no visibility guarantee
+//			 * over "context->iteration". It works well on IA32 and PowerPC, so...
+//			 */
+//
+//		}
+//		pthread_barrier_wait(&context->barrier);
+//	}
+//
+//	return 0;
+//}
+//
+//int calc_potential_pgs(potential_grid_t potential_grid1, potential_grid_t potential_grid2,
+//			obstacles_grid_t obstacles_grid, position_t goal_position,
+//			uint32_t iterations, uint32_t x_compartments, uint32_t y_compartments,
+//			uint32_t z_compartments)
+//{
+//	if (iterations & 1) {
+//		return -1;
+//	}
+//
+//	int return_code = 0;
+//
+//	pgs_context_t context;
+//	context.potential_grid = potential_grid;
+//	context.obstacles_grid = obstacles_grid;
+//	position_copy(context.goal_position, goal_position);
+//	context.total_number_iterations = iterations;
+//	context.x_compartments = x_compartments;
+//	context.y_compartments = y_compartments;
+//	context.z_compartments = z_compartments;
+//	context.tid_counter = 0;
+//
+//	pthread_mutexattr_t lock_attr;
+//	pthread_mutexattr_init(&lock_attr);
+//	pthread_mutex_init(&context.lock, &lock_attr);
+//
+//	pthread_condattr_t cond_attr;
+//	pthread_condattr_init(&cond_attr);
+//	for (uint32_t i = 0; i < x_compartments * y_compartments * z_compartments; i++) {
+//		pthread_cond_init(&context.signal[i], &cond_attr);
+//	}
+//
+//	pthread_t threads[n_threads];
+//	pthread_attr_t threads_attr[n_threads];
+//	for (uint32_t i = 1; i < n_threads; i++) {
+//		pthread_attr_init(&threads_attr[i]);
+//		pthread_create(&threads[i], &threads_attr[i], &pj_work, (void*) &context);
+//	}
+//	pj_work((void*) &context);
+//	for (uint32_t i = 1; i < n_threads; i++) {
+//		void *thread_return_code;
+//		pthread_join(threads[i], &thread_return_code);
+//		if (thread_return_code != 0) return_code = -1;
+//	}
+//
+//	return return_code;
+//}
+//
+//int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potential_grid2,
+//		obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations)
+//{
+//	if (iterations & 1) {
+//		return -1;
+//	}
+//
+//	potential_grid_t rf /* read from */ = potential_grid1;
+//	potential_grid_t wt /* write to */ = potential_grid2;
+//
+//	// Jacobi
+//	for (uint32_t i = 0; i < iterations; i++) {
+//		for (uint64_t a = 0; a < WORLD_SIZE_X; a++) {
+//			for (uint64_t b = 0; b < WORLD_SIZE_Y; b++) {
+//				for (uint64_t c = 0; c < WORLD_SIZE_Z; c++) {
+//					if (position_is_goal(goal_position, a, b, c)) {
+//						wt[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
+//					} else if (position_is_obstacle(obstacles_grid, a, b, c)) {
+//						wt[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
+//					} else {
+//						wt[GRID_INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
+//					}
+//				}
+//			}
+//		}
+//
+//		potential_grid_t const tmp = rf; rf = wt; wt = tmp;
+//	}
+//
+//	return 0;
+//}
 
 typedef struct {
 	pthread_barrier_t barrier;
 	pthread_mutex_t lock;
-	uint32_t n_threads, tid_counter, iteration, total_number_iterations;
+	uint32_t n_threads, tid_counter, total_number_iterations;
 	obstacles_grid_t obstacles_grid;
 	position_t goal_position;
 	potential_grid_t potential_grid1, potential_grid2;
@@ -169,7 +253,7 @@ static void* pj_work(void *arg)
 	// [x_left_limit, x_right_limit[
 
 	// Parallel Jacobi
-	while (context->iteration < context->total_number_iterations) {
+	for (uint32_t iteration = 0; iteration < context->total_number_iterations; iteration++) {
 		uint64_t a, b, c;
 
 		for (a = x_left_limit; a < x_right_limit; a++) {
@@ -187,15 +271,6 @@ static void* pj_work(void *arg)
 		}
 
 		potential_grid_t const tmp = rf; rf = wt; wt = tmp;
-		if (tid == 0) {
-			context->iteration++;
-			/*
-			 * Note: I'm pretty sure this in not 100% portable; in some
-			 * archs (e.g., alpha) there will be no visibility guarantee
-			 * over "context->iteration". It works well on IA32 and PowerPC, so...
-			 */
-
-		}
 		pthread_barrier_wait(&context->barrier);
 	}
 
@@ -218,7 +293,6 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 	context.obstacles_grid = obstacles_grid;
 	position_copy(context.goal_position, goal_position);
 	context.total_number_iterations = iterations;
-	context.iteration = 0;
 	context.n_threads = n_threads;
 	context.tid_counter = 0;
 
@@ -247,7 +321,8 @@ int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potenti
 }
 
 
-int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t starting_position, position_t goal_position)
+int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
+		position_t starting_position, position_t goal_position, FILE *stream)
 {
 	position_t current_position;
 	position_copy(current_position, starting_position);
@@ -279,8 +354,7 @@ int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_g
 			}
 		}
 
-		printf("Next waypoint: [%lu, %lu, %lu] with value %2.12f (%e)\n", next[0],
-				next[1], next[2], best_value, best_value);
+		fprintf(stream, "[%lu, %lu, %lu]\n", next[0], next[1], next[2]);
 
 		if (position_is_goal(goal_position, next[0], next[1], next[2])) {
 			break;

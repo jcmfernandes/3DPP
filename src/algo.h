@@ -15,6 +15,7 @@ int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potentia
 int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potential_grid2,
 		obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations, uint32_t n_threads);
 
-int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid, position_t starting_position, position_t goal_position);
+int find_waypoints(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
+		position_t starting_position, position_t goal_position, FILE *stream);
 
 #endif /* ALGO_H_ */
