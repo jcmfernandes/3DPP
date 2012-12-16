@@ -112,9 +112,9 @@ static void* pgs_work(void *arg)
 	uint32_t const tid = context->tid_counter++;
 	pthread_mutex_unlock(&context->lock);
 
-	int32_t const x = tid % context->x_compartments;
-	int32_t const y = (tid / context->x_compartments) % context->y_compartments;
-	int32_t const z = (tid / (context->y_compartments * context->x_compartments)) % context->z_compartments;
+	uint32_t const x = tid % context->x_compartments;
+	uint32_t const y = (tid / context->x_compartments) % context->y_compartments;
+	uint32_t const z = (tid / (context->y_compartments * context->x_compartments)) % context->z_compartments;
 
 	uint64_t const x_left_limit = WORLD_SIZE_X / context->x_compartments * x;
 	uint64_t const x_right_limit = x_left_limit + WORLD_SIZE_X / context->x_compartments;
@@ -129,21 +129,21 @@ static void* pgs_work(void *arg)
 	// Parallel Gauss-Seidel
 	for (uint32_t iteration = 0; iteration < context->total_number_iterations;) {
 
-		if (x - 1 >= 0) { // we need to wait for the previous pipeline stage to finish
+		if (x > 0) { // we need to wait for the previous pipeline stage to finish
 			uint32_t const i = z * context->x_compartments * context->y_compartments + y * context->y_compartments + (x - 1);
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
 			while (pipeline_context->stage <= iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
-		if (y - 1 >= 0) { // we need to wait for the previous pipeline stage to finish
+		if (y > 0) { // we need to wait for the previous pipeline stage to finish
 			uint32_t const i = z * context->x_compartments * context->y_compartments + (y - 1) * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
 			while (pipeline_context->stage <= iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
-		if (z - 1 >= 0) { // we need to wait for the previous pipeline stage to finish
+		if (z > 0) { // we need to wait for the previous pipeline stage to finish
 			uint32_t const i = (z - 1) * context->x_compartments * context->y_compartments + y * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
