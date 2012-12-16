@@ -1,3 +1,6 @@
 .settings
 Debug
 Release
+bin
+obj
+
