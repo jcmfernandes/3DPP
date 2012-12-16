@@ -75,6 +75,9 @@ int main(int argc, char * argv[])
 		calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
 		//calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position, 0.001);
 		break;
+	case PGS:
+		calc_potential_pgs(potential_grid1, obstacles_grid, goal_position, iterations, 2, 2, 2);
+		break;
 	case J:
 		calc_potential_j(potential_grid1, potential_grid2,
 				obstacles_grid, goal_position, iterations);
@@ -84,7 +87,7 @@ int main(int argc, char * argv[])
 				obstacles_grid, goal_position, iterations, n_threads);
 		break;
 	default:
-		perror("WTF!\n");
+		perror("error: inexistent algorithm.\n");
 		break;
 	}
 	logEnd("process the potential grid");

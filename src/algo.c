@@ -95,6 +95,7 @@ typedef struct {
 
 typedef struct {
 	pgs_pipeline_context_t *pipeline_contexts;
+	pthread_mutex_t lock;
 	uint32_t tid_counter;
 	uint32_t total_number_iterations;
 	uint32_t x_compartments, y_compartments, z_compartments;
@@ -111,13 +112,17 @@ static void* pgs_work(void *arg)
 	uint32_t const tid = context->tid_counter++;
 	pthread_mutex_unlock(&context->lock);
 
-	uint64_t const x_left_limit = WORLD_SIZE_X / context->x_compartments * (tid % context->x_compartments);
+	int32_t const x = tid % context->x_compartments;
+	int32_t const y = (tid / context->x_compartments) % context->y_compartments;
+	int32_t const z = (tid / (context->y_compartments * context->x_compartments)) % context->z_compartments;
+
+	uint64_t const x_left_limit = WORLD_SIZE_X / context->x_compartments * x;
 	uint64_t const x_right_limit = x_left_limit + WORLD_SIZE_X / context->x_compartments;
 	// [x_left_limit, x_right_limit[
-	uint64_t const y_left_limit = WORLD_SIZE_Y / context->y_compartments * (tid % context->y_compartments);
+	uint64_t const y_left_limit = WORLD_SIZE_Y / context->y_compartments * y;
 	uint64_t const y_right_limit = y_left_limit + WORLD_SIZE_Y / context->y_compartments;
 	// [y_left_limit, y_right_limit[
-	uint64_t const z_left_limit = WORLD_SIZE_Z / context->z_compartments * (tid % context->z_compartments);
+	uint64_t const z_left_limit = WORLD_SIZE_Z / context->z_compartments * z;
 	uint64_t const z_right_limit = z_left_limit + WORLD_SIZE_Z / context->z_compartments;
 	// [z_left_limit, z_right_limit[
 
@@ -128,67 +133,71 @@ static void* pgs_work(void *arg)
 			uint32_t const i = z * context->x_compartments * context->y_compartments + y * context->y_compartments + (x - 1);
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			while (pipeline_context->state <= iteration) pthread_cond_wait(&pipeline_context->signal);
+			while (pipeline_context->stage <= iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
 		if (y - 1 >= 0) { // we need to wait for the previous pipeline stage to finish
 			uint32_t const i = z * context->x_compartments * context->y_compartments + (y - 1) * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			while (pipeline_context->state <= iteration) pthread_cond_wait(&pipeline_context->signal);
+			while (pipeline_context->stage <= iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
 		if (z - 1 >= 0) { // we need to wait for the previous pipeline stage to finish
 			uint32_t const i = (z - 1) * context->x_compartments * context->y_compartments + y * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			while (pipeline_context->state <= iteration) pthread_cond_wait(&pipeline_context->signal);
+			while (pipeline_context->stage <= iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
+
+		//printf("[%d, %d, %d] starting iteration %u\n\tx: %u / y: %u / z: %u\n", x, y, z, iteration, context->x_compartments, context->y_compartments, context->z_compartments);
 
 		for (uint64_t a = x_left_limit; a < x_right_limit; a++) {
 			for (uint64_t b = y_left_limit; b < y_right_limit; b++) {
 				for (uint64_t c = z_left_limit; c < z_right_limit; c++) {
 					if (position_is_goal(context->goal_position, a, b, c)) {
-						wt[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
+						context->potential_grid[GRID_INDEX(a, b, c)] = WEIGHT_SINK;
 					} else if (position_is_obstacle(context->obstacles_grid, a, b, c)) {
-						wt[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
+						context->potential_grid[GRID_INDEX(a, b, c)] = WEIGHT_OBSTACLE;
 					} else {
-						wt[GRID_INDEX(a, b, c)] = calc_avg_gs(rf, a, b, c);
+						context->potential_grid[GRID_INDEX(a, b, c)] = calc_avg_gs(context->potential_grid, a, b, c);
 					}
 				}
 			}
 		}
+
+		//printf("[%d, %d, %d] finishing iteration %u\n", x, y, z, iteration);
 
 		iteration++;
 		{
 			uint32_t const i = z * context->x_compartments * context->y_compartments + y * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			pipeline_context->state = iteration;
+			pipeline_context->stage = iteration;
 			pthread_cond_broadcast(&pipeline_context->signal);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
 
-		if (x + 1 <= context->x_compartments) { // we need to wait for the next pipeline stage to finish
+		if (x + 1 < context->x_compartments) { // we need to wait for the next pipeline stage to finish
 			uint32_t const i = z * context->x_compartments * context->y_compartments + y * context->y_compartments + (x + 1);
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			while (pipeline_context->state <= iteration) pthread_cond_wait(&pipeline_context->signal);
+			while (pipeline_context->stage < iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
-		if (y + 1 <= context->y_compartments) { // we need to wait for the next pipeline stage to finish
+		if (y + 1 < context->y_compartments) { // we need to wait for the next pipeline stage to finish
 			uint32_t const i = z * context->x_compartments * context->y_compartments + (y + 1) * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			while (pipeline_context->state <= iteration) pthread_cond_wait(&pipeline_context->signal);
+			while (pipeline_context->stage < iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
-		if (z + 1 <= context->z_compartments) { // we need to wait for the next pipeline stage to finish
+		if (z + 1 < context->z_compartments) { // we need to wait for the next pipeline stage to finish
 			uint32_t const i = (z + 1) * context->x_compartments * context->y_compartments + y * context->y_compartments + x;
 			pgs_pipeline_context_t *pipeline_context = &context->pipeline_contexts[i];
 			pthread_mutex_lock(&pipeline_context->lock);
-			while (pipeline_context->state <= iteration) pthread_cond_wait(&pipeline_context->signal);
+			while (pipeline_context->stage < iteration) pthread_cond_wait(&pipeline_context->signal, &pipeline_context->lock);
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
 	}
@@ -196,10 +205,9 @@ static void* pgs_work(void *arg)
 	return 0;
 }
 
-int calc_potential_pgs(potential_grid_t potential_grid1, potential_grid_t potential_grid2,
-			obstacles_grid_t obstacles_grid, position_t goal_position,
-			uint32_t iterations, uint32_t x_compartments, uint32_t y_compartments,
-			uint32_t z_compartments)
+int calc_potential_pgs(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
+		position_t goal_position,uint32_t iterations, uint32_t x_compartments,
+		uint32_t y_compartments, uint32_t z_compartments)
 {
 	if (iterations & 1) {
 		return -1;
@@ -208,6 +216,8 @@ int calc_potential_pgs(potential_grid_t potential_grid1, potential_grid_t potent
 	int return_code = 0;
 
 	pgs_context_t context;
+	pgs_pipeline_context_t pipeline_contexts[x_compartments * y_compartments * z_compartments];
+	context.pipeline_contexts = pipeline_contexts;
 	context.potential_grid = potential_grid;
 	context.obstacles_grid = obstacles_grid;
 	position_copy(context.goal_position, goal_position);
@@ -217,23 +227,25 @@ int calc_potential_pgs(potential_grid_t potential_grid1, potential_grid_t potent
 	context.z_compartments = z_compartments;
 	context.tid_counter = 0;
 
+	uint32_t const n_threads = x_compartments * y_compartments * z_compartments;
+
 	pthread_mutexattr_t lock_attr;
 	pthread_mutexattr_init(&lock_attr);
-	pthread_mutex_init(&context.lock, &lock_attr);
-
 	pthread_condattr_t cond_attr;
 	pthread_condattr_init(&cond_attr);
-	for (uint32_t i = 0; i < x_compartments * y_compartments * z_compartments; i++) {
-		pthread_cond_init(&context.signal[i], &cond_attr);
+	for (uint32_t i = 0; i < n_threads; i++) {
+		pipeline_contexts[i].stage = 0;
+		pthread_cond_init(&pipeline_contexts[i].signal, &cond_attr);
+		pthread_mutex_init(&pipeline_contexts[i].lock, &lock_attr);
 	}
 
 	pthread_t threads[n_threads];
 	pthread_attr_t threads_attr[n_threads];
 	for (uint32_t i = 1; i < n_threads; i++) {
 		pthread_attr_init(&threads_attr[i]);
-		pthread_create(&threads[i], &threads_attr[i], &pj_work, (void*) &context);
+		pthread_create(&threads[i], &threads_attr[i], &pgs_work, (void*) &context);
 	}
-	pj_work((void*) &context);
+	pgs_work((void*) &context);
 	for (uint32_t i = 1; i < n_threads; i++) {
 		void *thread_return_code;
 		pthread_join(threads[i], &thread_return_code);
