@@ -10,6 +10,9 @@ int calc_potential_gs(potential_grid_t potential_grid, obstacles_grid_t obstacle
 		position_t goal_position, uint32_t iterations);
 int calc_potential_gs_conv(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
 		position_t goal_position, double convergence);
+int calc_potential_pgs(potential_grid_t potential_grid, obstacles_grid_t obstacles_grid,
+		position_t goal_position,uint32_t iterations, uint32_t x_compartments,
+		uint32_t y_compartments, uint32_t z_compartments);
 int calc_potential_j(potential_grid_t potential_grid1, potential_grid_t potential_grid2,
 		obstacles_grid_t obstacles_grid, position_t goal_position, uint32_t iterations);
 int calc_potential_pj(potential_grid_t potential_grid1, potential_grid_t potential_grid2,

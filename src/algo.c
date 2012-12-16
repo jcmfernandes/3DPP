@@ -151,8 +151,6 @@ static void* pgs_work(void *arg)
 			pthread_mutex_unlock(&pipeline_context->lock);
 		}
 
-		//printf("[%d, %d, %d] starting iteration %u\n\tx: %u / y: %u / z: %u\n", x, y, z, iteration, context->x_compartments, context->y_compartments, context->z_compartments);
-
 		for (uint64_t a = x_left_limit; a < x_right_limit; a++) {
 			for (uint64_t b = y_left_limit; b < y_right_limit; b++) {
 				for (uint64_t c = z_left_limit; c < z_right_limit; c++) {
@@ -166,8 +164,6 @@ static void* pgs_work(void *arg)
 				}
 			}
 		}
-
-		//printf("[%d, %d, %d] finishing iteration %u\n", x, y, z, iteration);
 
 		iteration++;
 		{

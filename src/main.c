@@ -8,7 +8,7 @@
 #include "log.h"
 #include "grids.h"
 
-typedef enum { GS, PGS, J, PJ } ALGO;
+typedef enum { GS, CGS, PGS, J, PJ } ALGO;
 
 potential_grid_cell_t static potential_grid_cells_1[WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z];
 potential_grid_cell_t static potential_grid_cells_2[WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z];
@@ -19,7 +19,6 @@ int main(int argc, char * argv[])
 	potential_grid_t potential_grid1, potential_grid2;
 	obstacles_grid_t obstacles_grid;
 	position_t starting_position, goal_position;
-	uint32_t iterations, n_threads;
 
 	potential_grid1 = (potential_grid_t) potential_grid_cells_1;
 	potential_grid2 = (potential_grid_t) potential_grid_cells_2;
@@ -32,10 +31,6 @@ int main(int argc, char * argv[])
 	goal_position[0] = GOAL_X;
 	goal_position[1] = GOAL_Y;
 	goal_position[2] = heightmap[GOAL_X][GOAL_Y] + 2;
-
-	//iterations = 4 * WORLD_SIZE_X * WORLD_SIZE_Y * WORLD_SIZE_Z;
-	iterations = ITERATIONS;
-	n_threads = THREADS;
 
 	logStart("initialize obstacle map");
 	// Recode heightmap to global_obstacles
@@ -72,19 +67,21 @@ int main(int argc, char * argv[])
 	logStart("process the potential grid");
 	switch (ALGORITHM) {
 	case GS:
-		calc_potential_gs(potential_grid1, obstacles_grid, goal_position, iterations);
-		//calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position, 0.001);
+		calc_potential_gs(potential_grid1, obstacles_grid, goal_position, GS_ITERATIONS);
+		break;
+	case CGS:
+		calc_potential_gs_conv(potential_grid1, obstacles_grid, goal_position, CGS_CONVERGENCE_DELTA);
 		break;
 	case PGS:
-		calc_potential_pgs(potential_grid1, obstacles_grid, goal_position, iterations, 2, 2, 2);
+		calc_potential_pgs(potential_grid1, obstacles_grid, goal_position, PGS_ITERATIONS, PGS_X_COMPARTMENTS, PGS_Y_COMPARTMENTS, PGS_Z_COMPARTMENTS);
 		break;
 	case J:
 		calc_potential_j(potential_grid1, potential_grid2,
-				obstacles_grid, goal_position, iterations);
+				obstacles_grid, goal_position, J_ITERATIONS);
 		break;
 	case PJ:
 		calc_potential_pj(potential_grid1, potential_grid2,
-				obstacles_grid, goal_position, iterations, n_threads);
+				obstacles_grid, goal_position, PJ_ITERATIONS, PJ_THREADS);
 		break;
 	default:
 		perror("error: inexistent algorithm.\n");
