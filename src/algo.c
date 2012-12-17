@@ -229,6 +229,7 @@ int calc_potential_pgs(potential_grid_t potential_grid, obstacles_grid_t obstacl
 	pthread_mutexattr_init(&lock_attr);
 	pthread_condattr_t cond_attr;
 	pthread_condattr_init(&cond_attr);
+	pthread_mutex_init(&context.lock, &lock_attr);
 	for (uint32_t i = 0; i < n_threads; i++) {
 		pipeline_contexts[i].stage = 0;
 		pthread_cond_init(&pipeline_contexts[i].signal, &cond_attr);
